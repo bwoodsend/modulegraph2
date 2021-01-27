@@ -503,7 +503,13 @@ class ModuleGraph(ObjectGraph[Union[BaseNode, PyPIDistribution], DependencyInfo]
                 # hence we know that find_spec will be successful and
                 # will find a package with an __init__.py.
                 parent = module_name.rpartition(".")[0]
-                assert parent not in sys.modules, f'{parent} already in sys.modules'
+                if parent in sys.modules and \
+                        isinstance(sys.modules[parent], FakePackage):
+                    # This is the retry and it didn't work. Despite injecting
+                    # the parent into sys.modules, module_name could not be
+                    # found. Assume the child is missing.
+                    return self._create_missing_module(importing_module, module_name)
+                assert parent not in sys.modules
 
                 spec = importlib.util.find_spec(parent)
                 assert spec is not None
